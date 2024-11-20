@@ -1,0 +1,566 @@
+<html><head><base href="." />
+    <title>Bouncing Ball in Circle</title>
+    <style>
+      body { 
+        margin: 0; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        min-height: 100vh; 
+        background: #000; 
+        font-family: Arial, sans-serif; 
+        padding: 20px; 
+      }
+      canvas { background: #111; border-radius: 50%; }
+      #container { 
+        position: relative;
+        margin: 20px 0; 
+      }
+      #controls {
+        background: rgba(0, 0, 0, 0.8);
+        padding: 10px;
+        border-radius: 10px;
+        max-height: 350px; 
+        overflow-y: auto; 
+        transition: max-height 0.3s ease-out;
+        margin-top: 10px;
+      }
+      #controls.expanded {
+        max-height: 350px; 
+      }
+      .dropdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        padding: 5px;
+        margin-bottom: 10px;
+        color: white;
+        font-weight: bold;
+      }
+      .dropdown-arrow {
+        transition: transform 0.3s ease;
+      }
+      #controls.expanded .dropdown-arrow {
+        transform: rotate(180deg);
+      }
+      .controls-content {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      #controls.expanded .controls-content {
+        opacity: 1;
+      }
+      .control-row {
+        display: flex;
+        justify-content: center;
+        gap: 15px; 
+        flex-wrap: wrap;
+        margin-bottom: 15px; 
+      }
+      button {
+        background: #444;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 15px;
+        cursor: pointer;
+        margin: 0 5px;
+        position: relative;
+      }
+      button.active {
+        background: #4CAF50;
+      }
+      button:hover { background: #666; }
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-left: 5px;
+        background: #f00;
+      }
+      .status-indicator.on {
+        background: #0f0;
+      }
+      .slider-container,
+      .color-picker-container,
+      .zigzag-container {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: #444; 
+        padding: 5px 15px; 
+        border-radius: 15px;
+        color: white; 
+      }
+      input[type="range"] {
+        width: 120px; 
+        margin: 0 5px;
+      }
+      label {
+        font-size: 12px;
+        white-space: nowrap;
+        color: white; 
+      }
+      #zigzagValue,
+      #bouncinessValue,
+      #speedValue {
+        color: white;
+        min-width: 40px; 
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      #zigzagValue:hover,
+      #bouncinessValue:hover,
+      #speedValue:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .color-picker {
+        margin: 0 5px;
+        padding: 0;
+        width: 30px;
+        height: 25px;
+        border-radius: 5px;
+        border: 2px solid #666;
+        cursor: pointer;
+      }
+      #controls::-webkit-scrollbar {
+        width: 8px;
+      }
+      #controls::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+      #controls::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+      }
+      #controls::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <canvas id="canvas"></canvas>
+      <div id="controls">
+        <div class="dropdown-header" onclick="toggleControls()">
+          <span>Controls</span>
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        <div class="controls-content">
+          <div class="control-row">
+            <button onclick="resetBall()">Reset Ball</button>
+            <button onclick="deleteAllBalls()">Delete All Balls</button>
+            <button onclick="toggleGravity()" id="gravityBtn">Toggle Gravity<span class="status-indicator"></span></button>
+            <button onclick="toggleGrowth()" id="growthBtn">Toggle Ball Growth<span class="status-indicator"></span></button>
+            <button onclick="toggleShrink()" id="shrinkBtn">Toggle Circle Shrink<span class="status-indicator"></span></button>
+            <button onclick="toggleBounceMultiply()" id="bounceMultiplyBtn">Multiply Bounce<span class="status-indicator"></span></button>
+            <button onclick="spawnNewBall()">Spawn Ball</button>
+          </div>
+          <div class="control-row">
+            <button onclick="toggleTrail()" id="trailBtn">Toggle Trail<span class="status-indicator"></span></button>
+            <button onclick="togglePulse()" id="pulseBtn">Toggle Pulse<span class="status-indicator"></span></button>
+            <button onclick="toggleSpin()" id="spinBtn">Toggle Spin<span class="status-indicator"></span></button>
+            <button onclick="toggleZigzag()" id="zigzagBtn">Toggle Zigzag<span class="status-indicator"></span></button>
+            <button onclick="toggleGlitter()" id="glitterBtn">Toggle Glitter<span class="status-indicator"></span></button>
+          </div>
+          <div class="control-row">
+            <div class="color-picker-container">
+              <label>Ball Color:</label>
+              <input type="color" class="color-picker" value="#4CAF50" oninput="updateBallColor(this.value)">
+            </div>
+            <div class="zigzag-container">
+              <label>Zigzag Intensity:</label>
+              <input type="range" min="0" max="100" step="0.1" value="20" oninput="updateZigzagIntensity(this.value)">
+              <span id="zigzagValue" onclick="promptCustomValue('zigzag')">20.0</span>
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="slider-container">
+              <label>Bounciness:</label>
+              <input type="range" min="0.1" max="5" step="0.01" value="1" oninput="updateBounciness(this.value)">
+              <span id="bouncinessValue" onclick="promptCustomValue('bounciness')">1.00</span>
+            </div>
+            <div class="slider-container">
+              <label>Speed:</label>
+              <input type="range" min="1" max="20" step="0.1" value="5" oninput="updateSpeed(this.value)">
+              <span id="speedValue" onclick="promptCustomValue('speed')">5.0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <script>
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+  
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.9; 
+      canvas.width = size;
+      canvas.height = size;
+  
+      let balls = [{
+        x: size / 2,
+        y: size / 2,
+        radius: size / 40,
+        velocityX: 5,
+        velocityY: 0,
+        gravity: 0.5,
+        bounce: 1,
+        friction: 1,
+        originalRadius: size / 40,
+        color: '#4CAF50',
+        rotation: 0,
+        trail: [],
+        maxTrail: 20
+      }];
+  
+      const circle = {
+        x: size / 2,
+        y: size / 2,
+        radius: size / 2 - balls[0].radius,
+        originalRadius: size / 2 - balls[0].originalRadius
+      };
+  
+      let gravityEnabled = true;
+      let ballGrowthEnabled = false;
+      let circleShrinkEnabled = false;
+      let trailEnabled = false;
+      let pulseEnabled = false;
+      let spinEnabled = false;
+      let zigzagEnabled = false;
+      let zigzagIntensity = 20;
+      let zigzagPhase = 0;
+      let glitterEnabled = false;
+      let glitterParticles = [];
+      let baseSpeed = 5;
+      let bouncinessValue = 1;
+      let pulsePhase = 0;
+      let bounceMultiplyEnabled = true;
+  
+      function updateStatusIndicators() {
+        document.querySelector('#gravityBtn .status-indicator').classList.toggle('on', gravityEnabled);
+        document.querySelector('#growthBtn .status-indicator').classList.toggle('on', ballGrowthEnabled);
+        document.querySelector('#shrinkBtn .status-indicator').classList.toggle('on', circleShrinkEnabled);
+        document.querySelector('#trailBtn .status-indicator').classList.toggle('on', trailEnabled);
+        document.querySelector('#pulseBtn .status-indicator').classList.toggle('on', pulseEnabled);
+        document.querySelector('#spinBtn .status-indicator').classList.toggle('on', spinEnabled);
+        document.querySelector('#zigzagBtn .status-indicator').classList.toggle('on', zigzagEnabled);
+        document.querySelector('#glitterBtn .status-indicator').classList.toggle('on', glitterEnabled);
+        document.querySelector('#bounceMultiplyBtn .status-indicator').classList.toggle('on', bounceMultiplyEnabled);
+      }
+  
+      function toggleControls() {
+        const controls = document.getElementById('controls');
+        controls.classList.toggle('expanded');
+      }
+  
+      function deleteAllBalls() {
+        balls = [balls[0]];
+        resetBall();
+      }
+  
+      function toggleBounceMultiply() {
+        bounceMultiplyEnabled = !bounceMultiplyEnabled;
+        updateStatusIndicators();
+      }
+  
+      function spawnNewBall() {
+        const newBall = {
+          ...balls[0],
+          x: size / 2,
+          y: size / 2,
+          velocityX: baseSpeed * (Math.random() - 0.5),
+          velocityY: baseSpeed * (Math.random() - 0.5),
+          trail: []
+        };
+        balls.push(newBall);
+      }
+  
+      function toggleTrail() {
+        trailEnabled = !trailEnabled;
+        if (!trailEnabled) balls.forEach(ball => ball.trail = []);
+        updateStatusIndicators();
+      }
+  
+      function togglePulse() {
+        pulseEnabled = !pulseEnabled;
+        updateStatusIndicators();
+      }
+  
+      function toggleSpin() {
+        spinEnabled = !spinEnabled;
+        updateStatusIndicators();
+      }
+  
+      function toggleZigzag() {
+        zigzagEnabled = !zigzagEnabled;
+        updateStatusIndicators();
+      }
+  
+      function toggleGlitter() {
+        glitterEnabled = !glitterEnabled;
+        if (!glitterEnabled) {
+          glitterParticles = [];
+        }
+        updateStatusIndicators();
+      }
+  
+      function updateBallColor(color) {
+        balls.forEach(ball => ball.color = color);
+      }
+  
+      function toggleGravity() {
+        gravityEnabled = !gravityEnabled;
+        updateStatusIndicators();
+      }
+  
+      function toggleGrowth() {
+        ballGrowthEnabled = !ballGrowthEnabled;
+        if (!ballGrowthEnabled) {
+          balls.forEach(ball => ball.radius = ball.originalRadius);
+        }
+        updateStatusIndicators();
+      }
+  
+      function toggleShrink() {
+        circleShrinkEnabled = !circleShrinkEnabled;
+        if (!circleShrinkEnabled) {
+          circle.radius = circle.originalRadius;
+        }
+        updateStatusIndicators();
+      }
+  
+      function updateBounciness(value) {
+        bouncinessValue = parseFloat(value);
+        document.getElementById('bouncinessValue').textContent = bouncinessValue.toFixed(2);
+      }
+  
+      function updateSpeed(value) {
+        baseSpeed = parseFloat(value);
+        document.getElementById('speedValue').textContent = baseSpeed.toFixed(1);
+        const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
+        balls.forEach(ball => {
+          ball.velocityX = Math.cos(currentDirection) * baseSpeed;
+          ball.velocityY = Math.sin(currentDirection) * baseSpeed;
+        });
+      }
+  
+      function updateZigzagIntensity(value) {
+        zigzagIntensity = parseFloat(value);
+        document.getElementById('zigzagValue').textContent = zigzagIntensity.toFixed(1);
+      }
+  
+      function promptCustomValue(type) {
+        let currentValue, newValue, min, max;
+        
+        switch(type) {
+          case 'zigzag':
+            currentValue = zigzagIntensity;
+            newValue = prompt('Enter custom zigzag intensity (any number):', currentValue);
+            if (newValue !== null) {
+              newValue = parseFloat(newValue);
+              if (!isNaN(newValue)) {
+                zigzagIntensity = newValue;
+                document.getElementById('zigzagValue').textContent = newValue.toFixed(1);
+                document.querySelector('.zigzag-container input').value = Math.min(Math.max(newValue, 0), 100);
+              }
+            }
+            break;
+            
+          case 'bounciness':
+            currentValue = bouncinessValue;
+            newValue = prompt('Enter custom bounciness (any number):', currentValue);
+            if (newValue !== null) {
+              newValue = parseFloat(newValue);
+              if (!isNaN(newValue)) {
+                bouncinessValue = newValue;
+                document.getElementById('bouncinessValue').textContent = newValue.toFixed(2);
+                document.querySelector('.slider-container input[oninput*="updateBounciness"]').value = Math.min(Math.max(newValue, 0.1), 5);
+              }
+            }
+            break;
+            
+          case 'speed':
+            currentValue = baseSpeed;
+            newValue = prompt('Enter custom speed (any number):', currentValue);
+            if (newValue !== null) {
+              newValue = parseFloat(newValue);
+              if (!isNaN(newValue)) {
+                baseSpeed = newValue;
+                document.getElementById('speedValue').textContent = newValue.toFixed(1);
+                document.querySelector('.slider-container input[oninput*="updateSpeed"]').value = Math.min(Math.max(newValue, 1), 20);
+                const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
+                balls.forEach(ball => {
+                  ball.velocityX = Math.cos(currentDirection) * baseSpeed;
+                  ball.velocityY = Math.sin(currentDirection) * baseSpeed;
+                });
+              }
+            }
+            break;
+        }
+      }
+  
+      function resetBall() {
+        balls.forEach(ball => {
+          ball.x = size / 2;
+          ball.y = size / 2;
+          ball.velocityX = baseSpeed;
+          ball.velocityY = 0;
+          ball.radius = ball.originalRadius;
+          ball.trail = [];
+        });
+      }
+  
+      function checkCollision(ball) {
+        const dx = ball.x - circle.x;
+        const dy = ball.y - circle.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const effectiveRadius = circle.radius - ball.radius;
+  
+        if (distance > effectiveRadius) {
+          const angle = Math.atan2(dy, dx);
+  
+          ball.x = circle.x + Math.cos(angle) * effectiveRadius;
+          ball.y = circle.y + Math.sin(angle) * effectiveRadius;
+  
+          const randomAngle = (Math.random() * Math.PI / 1.5) - Math.PI / 3; 
+          const bounceAngle = angle + Math.PI + randomAngle;
+  
+          const currentSpeed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
+          const newSpeed = bounceMultiplyEnabled ? currentSpeed * bouncinessValue : baseSpeed * bouncinessValue;
+  
+          ball.velocityX = Math.cos(bounceAngle) * newSpeed;
+          ball.velocityY = Math.sin(bounceAngle) * newSpeed;
+  
+          if (ballGrowthEnabled) {
+            ball.radius *= 1.1;
+          }
+  
+          if (circleShrinkEnabled) {
+            circle.radius *= 0.99;
+          }
+        }
+      }
+  
+      function update() {
+        balls.forEach(ball => {
+          if (gravityEnabled) {
+            ball.velocityY += ball.gravity;
+          }
+  
+          if (zigzagEnabled) {
+            zigzagPhase += 0.1;
+            ball.x += Math.sin(zigzagPhase) * (zigzagIntensity / 10);
+          }
+  
+          if (spinEnabled) {
+            ball.rotation += 0.1;
+          }
+  
+          if (pulseEnabled) {
+            pulsePhase += 0.1;
+            ball.radius = ball.originalRadius * (1 + Math.sin(pulsePhase) * 0.2);
+          }
+  
+          ball.x += ball.velocityX;
+          ball.y += ball.velocityY;
+  
+          if (trailEnabled) {
+            ball.trail.push({x: ball.x, y: ball.y});
+            if (ball.trail.length > ball.maxTrail) {
+              ball.trail.shift();
+            }
+          }
+  
+          if (glitterEnabled) {
+            addGlitterParticle();
+            updateGlitter();
+          }
+  
+          checkCollision(ball);
+        });
+      }
+  
+      function addGlitterParticle() {
+        glitterParticles.push({
+          x: balls[0].x,
+          y: balls[0].y,
+          life: 1,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4
+        });
+      }
+  
+      function updateGlitter() {
+        glitterParticles = glitterParticles.filter(particle => {
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.life -= 0.02;
+          return particle.life > 0;
+        });
+      }
+  
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.beginPath();
+        ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        balls.forEach(ball => {
+          if (trailEnabled && ball.trail.length > 0) {
+            ball.trail.forEach((pos, i) => {
+              const alpha = i / ball.trail.length;
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, ball.radius * alpha, 0, Math.PI * 2);
+              ctx.fillStyle = `${ball.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+              ctx.fill();
+            });
+          }
+          
+          ctx.save();
+          ctx.translate(ball.x, ball.y);
+          ctx.rotate(ball.rotation);
+          ctx.beginPath();
+          ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+          ctx.fillStyle = ball.color;
+          ctx.fill();
+          
+          if (spinEnabled) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(ball.radius, 0);
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+          }
+          
+          ctx.restore();
+        });
+        
+        if (glitterEnabled) {
+          glitterParticles.forEach(particle => {
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = `${balls[0].color}${Math.floor(particle.life * 255).toString(16).padStart(2, '0')}`;
+            ctx.fill();
+          });
+        }
+      }
+  
+      function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+  
+      updateStatusIndicators();
+      document.getElementById('controls').classList.add('expanded');
+      gameLoop();
+    </script>
+  </body></html>
