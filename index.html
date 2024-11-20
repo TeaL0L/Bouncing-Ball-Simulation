@@ -1,566 +1,996 @@
 <html><head><base href="." />
-    <title>Bouncing Ball in Circle</title>
-    <style>
-      body { 
-        margin: 0; 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        min-height: 100vh; 
-        background: #000; 
-        font-family: Arial, sans-serif; 
-        padding: 20px; 
-      }
-      canvas { background: #111; border-radius: 50%; }
-      #container { 
-        position: relative;
-        margin: 20px 0; 
-      }
-      #controls {
-        background: rgba(0, 0, 0, 0.8);
-        padding: 10px;
-        border-radius: 10px;
-        max-height: 350px; 
-        overflow-y: auto; 
-        transition: max-height 0.3s ease-out;
-        margin-top: 10px;
-      }
-      #controls.expanded {
-        max-height: 350px; 
-      }
-      .dropdown-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-        padding: 5px;
-        margin-bottom: 10px;
-        color: white;
-        font-weight: bold;
-      }
-      .dropdown-arrow {
-        transition: transform 0.3s ease;
-      }
-      #controls.expanded .dropdown-arrow {
-        transform: rotate(180deg);
-      }
-      .controls-content {
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      #controls.expanded .controls-content {
-        opacity: 1;
-      }
-      .control-row {
-        display: flex;
-        justify-content: center;
-        gap: 15px; 
-        flex-wrap: wrap;
-        margin-bottom: 15px; 
-      }
-      button {
-        background: #444;
-        color: white;
-        border: none;
-        padding: 5px 15px;
-        border-radius: 15px;
-        cursor: pointer;
-        margin: 0 5px;
-        position: relative;
-      }
-      button.active {
-        background: #4CAF50;
-      }
-      button:hover { background: #666; }
-      .status-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-left: 5px;
-        background: #f00;
-      }
-      .status-indicator.on {
-        background: #0f0;
-      }
-      .slider-container,
-      .color-picker-container,
-      .zigzag-container {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        background: #444; 
-        padding: 5px 15px; 
-        border-radius: 15px;
-        color: white; 
-      }
-      input[type="range"] {
-        width: 120px; 
-        margin: 0 5px;
-      }
-      label {
-        font-size: 12px;
-        white-space: nowrap;
-        color: white; 
-      }
-      #zigzagValue,
-      #bouncinessValue,
-      #speedValue {
-        color: white;
-        min-width: 40px; 
-        cursor: pointer;
-        padding: 2px 4px;
-        border-radius: 3px;
-      }
-      #zigzagValue:hover,
-      #bouncinessValue:hover,
-      #speedValue:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      .color-picker {
-        margin: 0 5px;
-        padding: 0;
-        width: 30px;
-        height: 25px;
-        border-radius: 5px;
-        border: 2px solid #666;
-        cursor: pointer;
-      }
-      #controls::-webkit-scrollbar {
-        width: 8px;
-      }
-      #controls::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-      }
-      #controls::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-      }
-      #controls::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.4);
-      }
-    </style>
-  </head>
-  <body>
-    <div id="container">
-      <canvas id="canvas"></canvas>
-      <div id="controls">
-        <div class="dropdown-header" onclick="toggleControls()">
-          <span>Controls</span>
-          <span class="dropdown-arrow">▼</span>
+  <title>Bouncing Ball in Circle</title>
+  <style>
+    body { 
+      margin: 0; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      min-height: 100vh; 
+      background: #000; 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+    }
+    canvas { background: #111; border-radius: 50%; }
+    #container { 
+      position: relative;
+      margin: 20px 0; 
+    }
+    #controls {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 350px; 
+      overflow-y: auto; 
+      transition: max-height 0.3s ease-out;
+      margin-top: 10px;
+    }
+    #controls.expanded {
+      max-height: 350px; 
+    }
+    .dropdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 5px;
+      margin-bottom: 10px;
+      color: white;
+      font-weight: bold;
+    }
+    .dropdown-arrow {
+      transition: transform 0.3s ease;
+    }
+    #controls.expanded .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+    #audioPlayer .dropdown-arrow {
+      transition: transform 0.3s ease;
+    }
+    #audioPlayer.expanded .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+    .controls-content {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #controls.expanded .controls-content {
+      opacity: 1;
+    }
+    .control-row {
+      display: flex;
+      justify-content: center;
+      gap: 15px; 
+      flex-wrap: wrap;
+      margin-bottom: 15px; 
+    }
+    button {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 15px;
+      cursor: pointer;
+      margin: 0 5px;
+      position: relative;
+    }
+    button.active {
+      background: #4CAF50;
+    }
+    button:hover { background: #666; }
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 5px;
+      background: #f00;
+    }
+    .status-indicator.on {
+      background: #0f0;
+    }
+    .slider-container,
+    .color-picker-container,
+    .zigzag-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #444; 
+      padding: 5px 15px; 
+      border-radius: 15px;
+      color: white; 
+    }
+    input[type="range"] {
+      width: 120px; 
+      margin: 0 5px;
+    }
+    label {
+      font-size: 12px;
+      white-space: nowrap;
+      color: white; 
+    }
+    #zigzagValue,
+    #bouncinessValue,
+    #speedValue {
+      color: white;
+      min-width: 40px; 
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    #zigzagValue:hover,
+    #bouncinessValue:hover,
+    #speedValue:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .color-picker {
+      margin: 0 5px;
+      padding: 0;
+      width: 30px;
+      height: 25px;
+      border-radius: 5px;
+      border: 2px solid #666;
+      cursor: pointer;
+    }
+    #controls::-webkit-scrollbar {
+      width: 8px;
+    }
+    #controls::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    #controls::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+    #controls::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+    #audioPlayer {
+      max-height: 40px; /* When collapsed */
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px; /* Increased gap between elements */
+      z-index: 1000;
+      color: white;
+      min-width: 250px; /* Added minimum width */
+    }
+    #audioPlayer.expanded {
+      max-height: 350px; /* When expanded */
+    }
+    .player-content {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #audioPlayer.expanded .player-content {
+      opacity: 1;
+    }
+    .audio-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 15px; /* Increased gap */
+      margin-bottom: 15px;
+    }
+    .link-input {
+      display: flex;
+      gap: 10px; /* Increased gap */
+      flex-wrap: wrap; /* Allow wrapping if needed */
+    }
+    .link-input input {
+      flex: 1;
+      min-width: 180px; /* Ensure minimum width for input */
+    }
+    #audioControls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap; /* Allow wrapping for small screens */
+    }
+    #audioControls button {
+      flex: 1;
+      min-width: 70px; /* Minimum button width */
+      margin: 0;
+      white-space: nowrap; /* Prevent button text from wrapping */
+    }
+    #songSelect {
+      width: 100%;
+      padding: 8px 12px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-size: 14px;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      position: relative;
+      transition: background-color 0.3s ease;
+    }
+    #songSelect:hover {
+      background: #555;
+    }
+    #songSelect:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.5);
+    }
+    #songSelect option {
+      background: #333;
+      color: white;
+      padding: 8px;
+    }
+    .select-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .select-wrapper::after {
+      content: '▼';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      pointer-events: none;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="audioPlayer" class="expanded">
+    <div class="dropdown-header" onclick="toggleAudioPlayer()">
+      <span>Audio Player</span>
+      <span class="dropdown-arrow">▼</span>
+    </div>
+    <div class="player-content">
+      <div class="audio-inputs">
+        <input type="file" id="audioFile" accept="audio/*" style="display: none">
+        <button onclick="document.getElementById('audioFile').click()" class="upload-btn">Upload Audio File</button>
+        <div class="link-input">
+          <input type="text" id="audioLink" placeholder="Paste audio or YouTube URL" style="width: 200px; padding: 5px; background: #444; border: none; color: white; border-radius: 5px;">
+          <button onclick="addAudioLink()">Add</button>
         </div>
-        <div class="controls-content">
-          <div class="control-row">
-            <button onclick="resetBall()">Reset Ball</button>
-            <button onclick="deleteAllBalls()">Delete All Balls</button>
-            <button onclick="toggleGravity()" id="gravityBtn">Toggle Gravity<span class="status-indicator"></span></button>
-            <button onclick="toggleGrowth()" id="growthBtn">Toggle Ball Growth<span class="status-indicator"></span></button>
-            <button onclick="toggleShrink()" id="shrinkBtn">Toggle Circle Shrink<span class="status-indicator"></span></button>
-            <button onclick="toggleBounceMultiply()" id="bounceMultiplyBtn">Multiply Bounce<span class="status-indicator"></span></button>
-            <button onclick="spawnNewBall()">Spawn Ball</button>
+      </div>
+      <div class="select-wrapper">
+        <select id="songSelect">
+          <option value="">Select a song...</option>
+        </select>
+      </div>
+      <div id="audioControls">
+        <button onclick="togglePlay()">Play/Pause</button>
+        <button onclick="stopAudio()">Stop</button>
+        <button onclick="removeSelected()">Remove</button>
+      </div>
+      <div id="nowPlaying"></div>
+    </div>
+  </div>
+  <div id="container">
+    <canvas id="canvas"></canvas>
+    <div id="controls">
+      <div class="dropdown-header" onclick="toggleControls()">
+        <span>Controls</span>
+        <span class="dropdown-arrow">▼</span>
+      </div>
+      <div class="controls-content">
+        <div class="control-row">
+          <button onclick="resetBall()">Reset Ball</button>
+          <button onclick="deleteAllBalls()">Delete All Balls</button>
+          <button onclick="toggleGravity()" id="gravityBtn">Toggle Gravity<span class="status-indicator"></span></button>
+          <button onclick="toggleGrowth()" id="growthBtn">Toggle Ball Growth<span class="status-indicator"></span></button>
+          <button onclick="toggleShrink()" id="shrinkBtn">Toggle Circle Shrink<span class="status-indicator"></span></button>
+          <button onclick="toggleBounceMultiply()" id="bounceMultiplyBtn">Multiply Bounce<span class="status-indicator"></span></button>
+          <button onclick="spawnNewBall()">Spawn Ball</button>
+        </div>
+        <div class="control-row">
+          <button onclick="toggleTrail()" id="trailBtn">Toggle Trail<span class="status-indicator"></span></button>
+          <button onclick="togglePulse()" id="pulseBtn">Toggle Pulse<span class="status-indicator"></span></button>
+          <button onclick="toggleSpin()" id="spinBtn">Toggle Spin<span class="status-indicator"></span></button>
+          <button onclick="toggleZigzag()" id="zigzagBtn">Toggle Zigzag<span class="status-indicator"></span></button>
+          <button onclick="toggleGlitter()" id="glitterBtn">Toggle Glitter<span class="status-indicator"></span></button>
+        </div>
+        <div class="control-row">
+          <div class="color-picker-container">
+            <label>Ball Color:</label>
+            <input type="color" class="color-picker" value="#4CAF50" oninput="updateBallColor(this.value)">
           </div>
-          <div class="control-row">
-            <button onclick="toggleTrail()" id="trailBtn">Toggle Trail<span class="status-indicator"></span></button>
-            <button onclick="togglePulse()" id="pulseBtn">Toggle Pulse<span class="status-indicator"></span></button>
-            <button onclick="toggleSpin()" id="spinBtn">Toggle Spin<span class="status-indicator"></span></button>
-            <button onclick="toggleZigzag()" id="zigzagBtn">Toggle Zigzag<span class="status-indicator"></span></button>
-            <button onclick="toggleGlitter()" id="glitterBtn">Toggle Glitter<span class="status-indicator"></span></button>
+          <div class="zigzag-container">
+            <label>Zigzag Intensity:</label>
+            <input type="range" min="0" max="100" step="0.1" value="20" oninput="updateZigzagIntensity(this.value)">
+            <span id="zigzagValue" onclick="promptCustomValue('zigzag')">20.0</span>
           </div>
-          <div class="control-row">
-            <div class="color-picker-container">
-              <label>Ball Color:</label>
-              <input type="color" class="color-picker" value="#4CAF50" oninput="updateBallColor(this.value)">
-            </div>
-            <div class="zigzag-container">
-              <label>Zigzag Intensity:</label>
-              <input type="range" min="0" max="100" step="0.1" value="20" oninput="updateZigzagIntensity(this.value)">
-              <span id="zigzagValue" onclick="promptCustomValue('zigzag')">20.0</span>
-            </div>
+        </div>
+        <div class="control-row">
+          <div class="slider-container">
+            <label>Bounciness:</label>
+            <input type="range" min="0.1" max="5" step="0.01" value="1" oninput="updateBounciness(this.value)">
+            <span id="bouncinessValue" onclick="promptCustomValue('bounciness')">1.00</span>
           </div>
-          <div class="control-row">
-            <div class="slider-container">
-              <label>Bounciness:</label>
-              <input type="range" min="0.1" max="5" step="0.01" value="1" oninput="updateBounciness(this.value)">
-              <span id="bouncinessValue" onclick="promptCustomValue('bounciness')">1.00</span>
-            </div>
-            <div class="slider-container">
-              <label>Speed:</label>
-              <input type="range" min="1" max="20" step="0.1" value="5" oninput="updateSpeed(this.value)">
-              <span id="speedValue" onclick="promptCustomValue('speed')">5.0</span>
-            </div>
+          <div class="slider-container">
+            <label>Speed:</label>
+            <input type="range" min="1" max="20" step="0.1" value="5" oninput="updateSpeed(this.value)">
+            <span id="speedValue" onclick="promptCustomValue('speed')">5.0</span>
           </div>
         </div>
       </div>
     </div>
-  
-    <script>
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-  
-      const size = Math.min(window.innerWidth, window.innerHeight) * 0.9; 
-      canvas.width = size;
-      canvas.height = size;
-  
-      let balls = [{
+  </div>
+
+  <script>
+    let audio = null;
+    let playlist = [];
+
+    // Load playlist from localStorage
+    function loadPlaylist() {
+      const saved = localStorage.getItem('audioPlaylist');
+      if (saved) {
+        playlist = JSON.parse(saved);
+        updatePlaylistDisplay();
+      }
+    }
+
+    // Save playlist to localStorage
+    function savePlaylist() {
+      localStorage.setItem('audioPlaylist', JSON.stringify(playlist));
+    }
+
+    // Update the select element with playlist items
+    function updatePlaylistDisplay() {
+      const select = document.getElementById('songSelect');
+      select.innerHTML = '<option value="">Select a song...</option>';
+      playlist.forEach((item, index) => {
+        const opt = document.createElement('option');
+        opt.value = item.url;
+        opt.textContent = item.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // Handle file uploads
+    document.getElementById('audioFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        playlist.push({
+          name: file.name,
+          url: url,
+          type: 'file'
+        });
+        savePlaylist();
+        updatePlaylistDisplay();
+      }
+    });
+
+    // Improved add audio link function
+    async function addAudioLink() {
+      const input = document.getElementById('audioLink');
+      const url = input.value.trim();
+      
+      if (!url) return;
+      
+      try {
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          // Extract video ID with better error handling
+          let videoId = '';
+          if (url.includes('youtube.com/watch?v=')) {
+            videoId = url.split('watch?v=')[1].split('&')[0];
+          } else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1].split('?')[0];
+          }
+          
+          if (!videoId) {
+            throw new Error('Invalid YouTube URL');
+          }
+          
+          playlist.push({
+            name: `YouTube Video - ${videoId}`,
+            url: `https://www.youtube.com/embed/${videoId}?enablejsapi=1`,
+            type: 'youtube'
+          });
+          
+        } else {
+          // For direct audio links, check if the URL returns audio content
+          const response = await fetch(url);
+          const contentType = response.headers.get('content-type');
+          
+          if (!contentType || !contentType.includes('audio')) {
+            throw new Error('URL does not point to a valid audio file');
+          }
+          
+          const name = url.split('/').pop() || 'Audio Track';
+          playlist.push({
+            name: name,
+            url: url,
+            type: 'direct'
+          });
+        }
+        
+        savePlaylist();
+        updatePlaylistDisplay();
+        input.value = '';
+        
+      } catch (error) {
+        console.error('Error adding audio:', error);
+        alert('Could not add audio: ' + (error.message || 'Invalid or inaccessible URL'));
+      }
+    }
+
+    // Improved init audio function
+    function initAudio() {
+      if (audio) {
+        audio.pause();
+        audio = null;
+      }
+      
+      const songSelect = document.getElementById('songSelect');
+      const selectedValue = songSelect.value;
+      
+      if (!selectedValue) return;
+      
+      const selectedItem = playlist.find(item => item.url === selectedValue);
+      if (!selectedItem) return;
+      
+      try {
+        if (selectedItem.type === 'youtube') {
+          if (!window.YT) {
+            // Load YouTube IFrame API if not already loaded
+            if (!document.getElementById('youtube-api')) {
+              const tag = document.createElement('script');
+              tag.id = 'youtube-api';
+              tag.src = "https://www.youtube.com/iframe_api";
+              const firstScriptTag = document.getElementsByTagName('script')[0];
+              firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+              
+              window.onYouTubeIframeAPIReady = () => {
+                createYouTubePlayer(selectedItem);
+              };
+            } else {
+              createYouTubePlayer(selectedItem);
+            }
+          } else {
+            createYouTubePlayer(selectedItem);
+          }
+        } else {
+          audio = new Audio();
+          
+          // Add error handling for audio loading
+          audio.onerror = (e) => {
+            console.error('Audio loading error:', e);
+            alert('Failed to load audio file. The file may be invalid or inaccessible.');
+            document.getElementById('nowPlaying').textContent = 'Error loading audio';
+          };
+          
+          audio.onloadeddata = () => {
+            audio.play()
+              .catch(e => {
+                console.error('Audio playback error:', e);
+                alert('Failed to play audio. The file may be invalid or blocked by browser policies.');
+              });
+          };
+          
+          audio.src = selectedValue;
+          document.getElementById('nowPlaying').textContent = 'Loading...';
+          
+          audio.addEventListener('playing', () => {
+            document.getElementById('nowPlaying').textContent = 'Now playing: ' + 
+              songSelect.options[songSelect.selectedIndex].text;
+          });
+          
+          audio.addEventListener('ended', () => {
+            document.getElementById('nowPlaying').textContent = 'Playback ended';
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing audio:', error);
+        alert('Error initializing audio playback');
+      }
+    }
+
+    function removeSelected() {
+      const select = document.getElementById('songSelect');
+      const index = select.selectedIndex - 1; // Adjust for the "Select a song" option
+      
+      if (index >= 0) {
+        playlist.splice(index, 1);
+        savePlaylist();
+        updatePlaylistDisplay();
+        stopAudio();
+      }
+    }
+
+    function createYouTubePlayer(selectedItem) {
+      // Remove any existing player
+      const existingPlayer = document.getElementById('youtube-player');
+      if (existingPlayer) {
+        existingPlayer.remove();
+      }
+      
+      // Create hidden YouTube player
+      const playerDiv = document.createElement('div');
+      playerDiv.id = 'youtube-player';
+      playerDiv.style.display = 'none';
+      document.body.appendChild(playerDiv);
+      
+      const videoId = selectedItem.url.split('embed/')[1].split('?')[0];
+      
+      new YT.Player(playerDiv, {
+        videoId: videoId,
+        playerVars: {
+          'enablejsapi': 1,
+          'origin': window.location.origin
+        },
+        events: {
+          onReady: (event) => {
+            event.target.playVideo();
+            document.getElementById('nowPlaying').textContent = 'Now playing: ' + document.getElementById('songSelect').options[document.getElementById('songSelect').selectedIndex].text;
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.ENDED) {
+              document.getElementById('nowPlaying').textContent = 'Playback ended';
+            }
+          }
+        }
+      });
+    }
+
+    // Update the stopAudio function to handle YouTube
+    function stopAudio() {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        document.getElementById('nowPlaying').textContent = 'Stopped';
+      }
+      
+      const youtubePlayer = document.getElementById('youtube-player');
+      if (youtubePlayer) {
+        youtubePlayer.remove();
+        document.getElementById('nowPlaying').textContent = 'Stopped';
+      }
+    }
+
+    // Update togglePlay to handle YouTube
+    function togglePlay() {
+      if (!audio) {
+        const youtubePlayer = document.getElementById('youtube-player');
+        if (!youtubePlayer) {
+          initAudio();
+        } else {
+          // Get the YouTube player instance using the correct frame
+          const frame = document.querySelector('#youtube-player iframe');
+          if (frame && frame.contentWindow) {
+            const player = frame.contentWindow;
+            // Use postMessage to control the player
+            try {
+              player.postMessage('{"event":"command","func":"getPlayerState","args":""}', '*');
+              player.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            } catch (e) {
+              // If there's an error, reinitialize the player
+              initAudio();
+            }
+          } else {
+            initAudio();
+          }
+        }
+        return;
+      }
+      
+      if (audio.paused) {
+        audio.play();
+        document.getElementById('nowPlaying').textContent = 'Now playing: ' + document.getElementById('songSelect').options[document.getElementById('songSelect').selectedIndex].text;
+      } else {
+        audio.pause();
+        document.getElementById('nowPlaying').textContent = 'Paused';
+      }
+    }
+
+    document.getElementById('songSelect').addEventListener('change', initAudio);
+
+    // Load saved playlist on page load
+    loadPlaylist();
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const size = Math.min(window.innerWidth, window.innerHeight) * 0.9; 
+    canvas.width = size;
+    canvas.height = size;
+
+    let balls = [{
+      x: size / 2,
+      y: size / 2,
+      radius: size / 40,
+      velocityX: 5,
+      velocityY: 0,
+      gravity: 0.5,
+      bounce: 1,
+      friction: 1,
+      originalRadius: size / 40,
+      color: '#4CAF50',
+      rotation: 0,
+      trail: [],
+      maxTrail: 20
+    }];
+
+    const circle = {
+      x: size / 2,
+      y: size / 2,
+      radius: size / 2 - balls[0].radius,
+      originalRadius: size / 2 - balls[0].originalRadius
+    };
+
+    let gravityEnabled = true;
+    let ballGrowthEnabled = false;
+    let circleShrinkEnabled = false;
+    let trailEnabled = false;
+    let pulseEnabled = false;
+    let spinEnabled = false;
+    let zigzagEnabled = false;
+    let zigzagIntensity = 20;
+    let zigzagPhase = 0;
+    let glitterEnabled = false;
+    let glitterParticles = [];
+    let baseSpeed = 5;
+    let bouncinessValue = 1;
+    let pulsePhase = 0;
+    let bounceMultiplyEnabled = true;
+
+    function updateStatusIndicators() {
+      document.querySelector('#gravityBtn .status-indicator').classList.toggle('on', gravityEnabled);
+      document.querySelector('#growthBtn .status-indicator').classList.toggle('on', ballGrowthEnabled);
+      document.querySelector('#shrinkBtn .status-indicator').classList.toggle('on', circleShrinkEnabled);
+      document.querySelector('#trailBtn .status-indicator').classList.toggle('on', trailEnabled);
+      document.querySelector('#pulseBtn .status-indicator').classList.toggle('on', pulseEnabled);
+      document.querySelector('#spinBtn .status-indicator').classList.toggle('on', spinEnabled);
+      document.querySelector('#zigzagBtn .status-indicator').classList.toggle('on', zigzagEnabled);
+      document.querySelector('#glitterBtn .status-indicator').classList.toggle('on', glitterEnabled);
+      document.querySelector('#bounceMultiplyBtn .status-indicator').classList.toggle('on', bounceMultiplyEnabled);
+    }
+
+    function toggleControls() {
+      const controls = document.getElementById('controls');
+      controls.classList.toggle('expanded');
+    }
+
+    function toggleAudioPlayer() {
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playerContent = audioPlayer.querySelector('.player-content');
+      
+      if (audioPlayer.classList.contains('expanded')) {
+        // Collapsing
+        audioPlayer.classList.remove('expanded');
+        playerContent.style.display = 'none';
+        setTimeout(() => {
+          playerContent.style.opacity = '0';
+        }, 50);
+      } else {
+        // Expanding 
+        audioPlayer.classList.add('expanded');
+        playerContent.style.display = 'block';
+        setTimeout(() => {
+          playerContent.style.opacity = '1';
+        }, 50);
+      }
+    }
+
+    // Initialize player content state
+    document.addEventListener('DOMContentLoaded', () => {
+      const audioPlayer = document.getElementById('audioPlayer');
+      const playerContent = audioPlayer.querySelector('.player-content');
+      
+      // Start expanded
+      audioPlayer.classList.add('expanded');
+      playerContent.style.display = 'block';
+      playerContent.style.opacity = '1';
+    });
+
+    function deleteAllBalls() {
+      balls = [balls[0]];
+      resetBall();
+    }
+
+    function toggleBounceMultiply() {
+      bounceMultiplyEnabled = !bounceMultiplyEnabled;
+      updateStatusIndicators();
+    }
+
+    function spawnNewBall() {
+      const newBall = {
+        ...balls[0],
         x: size / 2,
         y: size / 2,
-        radius: size / 40,
-        velocityX: 5,
-        velocityY: 0,
-        gravity: 0.5,
-        bounce: 1,
-        friction: 1,
-        originalRadius: size / 40,
-        color: '#4CAF50',
-        rotation: 0,
-        trail: [],
-        maxTrail: 20
-      }];
-  
-      const circle = {
-        x: size / 2,
-        y: size / 2,
-        radius: size / 2 - balls[0].radius,
-        originalRadius: size / 2 - balls[0].originalRadius
+        velocityX: baseSpeed * (Math.random() - 0.5),
+        velocityY: baseSpeed * (Math.random() - 0.5),
+        trail: []
       };
-  
-      let gravityEnabled = true;
-      let ballGrowthEnabled = false;
-      let circleShrinkEnabled = false;
-      let trailEnabled = false;
-      let pulseEnabled = false;
-      let spinEnabled = false;
-      let zigzagEnabled = false;
-      let zigzagIntensity = 20;
-      let zigzagPhase = 0;
-      let glitterEnabled = false;
-      let glitterParticles = [];
-      let baseSpeed = 5;
-      let bouncinessValue = 1;
-      let pulsePhase = 0;
-      let bounceMultiplyEnabled = true;
-  
-      function updateStatusIndicators() {
-        document.querySelector('#gravityBtn .status-indicator').classList.toggle('on', gravityEnabled);
-        document.querySelector('#growthBtn .status-indicator').classList.toggle('on', ballGrowthEnabled);
-        document.querySelector('#shrinkBtn .status-indicator').classList.toggle('on', circleShrinkEnabled);
-        document.querySelector('#trailBtn .status-indicator').classList.toggle('on', trailEnabled);
-        document.querySelector('#pulseBtn .status-indicator').classList.toggle('on', pulseEnabled);
-        document.querySelector('#spinBtn .status-indicator').classList.toggle('on', spinEnabled);
-        document.querySelector('#zigzagBtn .status-indicator').classList.toggle('on', zigzagEnabled);
-        document.querySelector('#glitterBtn .status-indicator').classList.toggle('on', glitterEnabled);
-        document.querySelector('#bounceMultiplyBtn .status-indicator').classList.toggle('on', bounceMultiplyEnabled);
+      balls.push(newBall);
+    }
+
+    function toggleTrail() {
+      trailEnabled = !trailEnabled;
+      if (!trailEnabled) balls.forEach(ball => ball.trail = []);
+      updateStatusIndicators();
+    }
+
+    function togglePulse() {
+      pulseEnabled = !pulseEnabled;
+      updateStatusIndicators();
+    }
+
+    function toggleSpin() {
+      spinEnabled = !spinEnabled;
+      updateStatusIndicators();
+    }
+
+    function toggleZigzag() {
+      zigzagEnabled = !zigzagEnabled;
+      updateStatusIndicators();
+    }
+
+    function toggleGlitter() {
+      glitterEnabled = !glitterEnabled;
+      if (!glitterEnabled) {
+        glitterParticles = [];
       }
-  
-      function toggleControls() {
-        const controls = document.getElementById('controls');
-        controls.classList.toggle('expanded');
+      updateStatusIndicators();
+    }
+
+    function updateBallColor(color) {
+      balls.forEach(ball => ball.color = color);
+    }
+
+    function toggleGravity() {
+      gravityEnabled = !gravityEnabled;
+      updateStatusIndicators();
+    }
+
+    function toggleGrowth() {
+      ballGrowthEnabled = !ballGrowthEnabled;
+      if (!ballGrowthEnabled) {
+        balls.forEach(ball => ball.radius = ball.originalRadius);
       }
-  
-      function deleteAllBalls() {
-        balls = [balls[0]];
-        resetBall();
+      updateStatusIndicators();
+    }
+
+    function toggleShrink() {
+      circleShrinkEnabled = !circleShrinkEnabled;
+      if (!circleShrinkEnabled) {
+        circle.radius = circle.originalRadius;
       }
-  
-      function toggleBounceMultiply() {
-        bounceMultiplyEnabled = !bounceMultiplyEnabled;
-        updateStatusIndicators();
-      }
-  
-      function spawnNewBall() {
-        const newBall = {
-          ...balls[0],
-          x: size / 2,
-          y: size / 2,
-          velocityX: baseSpeed * (Math.random() - 0.5),
-          velocityY: baseSpeed * (Math.random() - 0.5),
-          trail: []
-        };
-        balls.push(newBall);
-      }
-  
-      function toggleTrail() {
-        trailEnabled = !trailEnabled;
-        if (!trailEnabled) balls.forEach(ball => ball.trail = []);
-        updateStatusIndicators();
-      }
-  
-      function togglePulse() {
-        pulseEnabled = !pulseEnabled;
-        updateStatusIndicators();
-      }
-  
-      function toggleSpin() {
-        spinEnabled = !spinEnabled;
-        updateStatusIndicators();
-      }
-  
-      function toggleZigzag() {
-        zigzagEnabled = !zigzagEnabled;
-        updateStatusIndicators();
-      }
-  
-      function toggleGlitter() {
-        glitterEnabled = !glitterEnabled;
-        if (!glitterEnabled) {
-          glitterParticles = [];
-        }
-        updateStatusIndicators();
-      }
-  
-      function updateBallColor(color) {
-        balls.forEach(ball => ball.color = color);
-      }
-  
-      function toggleGravity() {
-        gravityEnabled = !gravityEnabled;
-        updateStatusIndicators();
-      }
-  
-      function toggleGrowth() {
-        ballGrowthEnabled = !ballGrowthEnabled;
-        if (!ballGrowthEnabled) {
-          balls.forEach(ball => ball.radius = ball.originalRadius);
-        }
-        updateStatusIndicators();
-      }
-  
-      function toggleShrink() {
-        circleShrinkEnabled = !circleShrinkEnabled;
-        if (!circleShrinkEnabled) {
-          circle.radius = circle.originalRadius;
-        }
-        updateStatusIndicators();
-      }
-  
-      function updateBounciness(value) {
-        bouncinessValue = parseFloat(value);
-        document.getElementById('bouncinessValue').textContent = bouncinessValue.toFixed(2);
-      }
-  
-      function updateSpeed(value) {
-        baseSpeed = parseFloat(value);
-        document.getElementById('speedValue').textContent = baseSpeed.toFixed(1);
-        const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
-        balls.forEach(ball => {
-          ball.velocityX = Math.cos(currentDirection) * baseSpeed;
-          ball.velocityY = Math.sin(currentDirection) * baseSpeed;
-        });
-      }
-  
-      function updateZigzagIntensity(value) {
-        zigzagIntensity = parseFloat(value);
-        document.getElementById('zigzagValue').textContent = zigzagIntensity.toFixed(1);
-      }
-  
-      function promptCustomValue(type) {
-        let currentValue, newValue, min, max;
-        
-        switch(type) {
-          case 'zigzag':
-            currentValue = zigzagIntensity;
-            newValue = prompt('Enter custom zigzag intensity (any number):', currentValue);
-            if (newValue !== null) {
-              newValue = parseFloat(newValue);
-              if (!isNaN(newValue)) {
-                zigzagIntensity = newValue;
-                document.getElementById('zigzagValue').textContent = newValue.toFixed(1);
-                document.querySelector('.zigzag-container input').value = Math.min(Math.max(newValue, 0), 100);
-              }
-            }
-            break;
-            
-          case 'bounciness':
-            currentValue = bouncinessValue;
-            newValue = prompt('Enter custom bounciness (any number):', currentValue);
-            if (newValue !== null) {
-              newValue = parseFloat(newValue);
-              if (!isNaN(newValue)) {
-                bouncinessValue = newValue;
-                document.getElementById('bouncinessValue').textContent = newValue.toFixed(2);
-                document.querySelector('.slider-container input[oninput*="updateBounciness"]').value = Math.min(Math.max(newValue, 0.1), 5);
-              }
-            }
-            break;
-            
-          case 'speed':
-            currentValue = baseSpeed;
-            newValue = prompt('Enter custom speed (any number):', currentValue);
-            if (newValue !== null) {
-              newValue = parseFloat(newValue);
-              if (!isNaN(newValue)) {
-                baseSpeed = newValue;
-                document.getElementById('speedValue').textContent = newValue.toFixed(1);
-                document.querySelector('.slider-container input[oninput*="updateSpeed"]').value = Math.min(Math.max(newValue, 1), 20);
-                const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
-                balls.forEach(ball => {
-                  ball.velocityX = Math.cos(currentDirection) * baseSpeed;
-                  ball.velocityY = Math.sin(currentDirection) * baseSpeed;
-                });
-              }
-            }
-            break;
-        }
-      }
-  
-      function resetBall() {
-        balls.forEach(ball => {
-          ball.x = size / 2;
-          ball.y = size / 2;
-          ball.velocityX = baseSpeed;
-          ball.velocityY = 0;
-          ball.radius = ball.originalRadius;
-          ball.trail = [];
-        });
-      }
-  
-      function checkCollision(ball) {
-        const dx = ball.x - circle.x;
-        const dy = ball.y - circle.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const effectiveRadius = circle.radius - ball.radius;
-  
-        if (distance > effectiveRadius) {
-          const angle = Math.atan2(dy, dx);
-  
-          ball.x = circle.x + Math.cos(angle) * effectiveRadius;
-          ball.y = circle.y + Math.sin(angle) * effectiveRadius;
-  
-          const randomAngle = (Math.random() * Math.PI / 1.5) - Math.PI / 3; 
-          const bounceAngle = angle + Math.PI + randomAngle;
-  
-          const currentSpeed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
-          const newSpeed = bounceMultiplyEnabled ? currentSpeed * bouncinessValue : baseSpeed * bouncinessValue;
-  
-          ball.velocityX = Math.cos(bounceAngle) * newSpeed;
-          ball.velocityY = Math.sin(bounceAngle) * newSpeed;
-  
-          if (ballGrowthEnabled) {
-            ball.radius *= 1.1;
-          }
-  
-          if (circleShrinkEnabled) {
-            circle.radius *= 0.99;
-          }
-        }
-      }
-  
-      function update() {
-        balls.forEach(ball => {
-          if (gravityEnabled) {
-            ball.velocityY += ball.gravity;
-          }
-  
-          if (zigzagEnabled) {
-            zigzagPhase += 0.1;
-            ball.x += Math.sin(zigzagPhase) * (zigzagIntensity / 10);
-          }
-  
-          if (spinEnabled) {
-            ball.rotation += 0.1;
-          }
-  
-          if (pulseEnabled) {
-            pulsePhase += 0.1;
-            ball.radius = ball.originalRadius * (1 + Math.sin(pulsePhase) * 0.2);
-          }
-  
-          ball.x += ball.velocityX;
-          ball.y += ball.velocityY;
-  
-          if (trailEnabled) {
-            ball.trail.push({x: ball.x, y: ball.y});
-            if (ball.trail.length > ball.maxTrail) {
-              ball.trail.shift();
+      updateStatusIndicators();
+    }
+
+    function updateBounciness(value) {
+      bouncinessValue = parseFloat(value);
+      document.getElementById('bouncinessValue').textContent = bouncinessValue.toFixed(2);
+    }
+
+    function updateSpeed(value) {
+      baseSpeed = parseFloat(value);
+      document.getElementById('speedValue').textContent = baseSpeed.toFixed(1);
+      const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
+      balls.forEach(ball => {
+        ball.velocityX = Math.cos(currentDirection) * baseSpeed;
+        ball.velocityY = Math.sin(currentDirection) * baseSpeed;
+      });
+    }
+
+    function updateZigzagIntensity(value) {
+      zigzagIntensity = parseFloat(value);
+      document.getElementById('zigzagValue').textContent = zigzagIntensity.toFixed(1);
+    }
+
+    function promptCustomValue(type) {
+      let currentValue, newValue, min, max;
+      
+      switch(type) {
+        case 'zigzag':
+          currentValue = zigzagIntensity;
+          newValue = prompt('Enter custom zigzag intensity (any number):', currentValue);
+          if (newValue !== null) {
+            newValue = parseFloat(newValue);
+            if (!isNaN(newValue)) {
+              zigzagIntensity = newValue;
+              document.getElementById('zigzagValue').textContent = newValue.toFixed(1);
+              document.querySelector('.zigzag-container input').value = Math.min(Math.max(newValue, 0), 100);
             }
           }
-  
-          if (glitterEnabled) {
-            addGlitterParticle();
-            updateGlitter();
-          }
-  
-          checkCollision(ball);
-        });
-      }
-  
-      function addGlitterParticle() {
-        glitterParticles.push({
-          x: balls[0].x,
-          y: balls[0].y,
-          life: 1,
-          vx: (Math.random() - 0.5) * 4,
-          vy: (Math.random() - 0.5) * 4
-        });
-      }
-  
-      function updateGlitter() {
-        glitterParticles = glitterParticles.filter(particle => {
-          particle.x += particle.vx;
-          particle.y += particle.vy;
-          particle.life -= 0.02;
-          return particle.life > 0;
-        });
-      }
-  
-      function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.beginPath();
-        ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        balls.forEach(ball => {
-          if (trailEnabled && ball.trail.length > 0) {
-            ball.trail.forEach((pos, i) => {
-              const alpha = i / ball.trail.length;
-              ctx.beginPath();
-              ctx.arc(pos.x, pos.y, ball.radius * alpha, 0, Math.PI * 2);
-              ctx.fillStyle = `${ball.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
-              ctx.fill();
-            });
-          }
+          break;
           
-          ctx.save();
-          ctx.translate(ball.x, ball.y);
-          ctx.rotate(ball.rotation);
-          ctx.beginPath();
-          ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
-          ctx.fillStyle = ball.color;
-          ctx.fill();
-          
-          if (spinEnabled) {
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(ball.radius, 0);
-            ctx.strokeStyle = '#fff';
-            ctx.stroke();
+        case 'bounciness':
+          currentValue = bouncinessValue;
+          newValue = prompt('Enter custom bounciness (any number):', currentValue);
+          if (newValue !== null) {
+            newValue = parseFloat(newValue);
+            if (!isNaN(newValue)) {
+              bouncinessValue = newValue;
+              document.getElementById('bouncinessValue').textContent = newValue.toFixed(2);
+              document.querySelector('.slider-container input[oninput*="updateBounciness"]').value = Math.min(Math.max(newValue, 0.1), 5);
+            }
           }
+          break;
           
-          ctx.restore();
-        });
-        
+        case 'speed':
+          currentValue = baseSpeed;
+          newValue = prompt('Enter custom speed (any number):', currentValue);
+          if (newValue !== null) {
+            newValue = parseFloat(newValue);
+            if (!isNaN(newValue)) {
+              baseSpeed = newValue;
+              document.getElementById('speedValue').textContent = newValue.toFixed(1);
+              document.querySelector('.slider-container input[oninput*="updateSpeed"]').value = Math.min(Math.max(newValue, 1), 20);
+              const currentDirection = Math.atan2(balls[0].velocityY, balls[0].velocityX);
+              balls.forEach(ball => {
+                ball.velocityX = Math.cos(currentDirection) * baseSpeed;
+                ball.velocityY = Math.sin(currentDirection) * baseSpeed;
+              });
+            }
+          }
+          break;
+      }
+    }
+
+    function resetBall() {
+      balls.forEach(ball => {
+        ball.x = size / 2;
+        ball.y = size / 2;
+        ball.velocityX = baseSpeed;
+        ball.velocityY = 0;
+        ball.radius = ball.originalRadius;
+        ball.trail = [];
+      });
+    }
+
+    function checkCollision(ball) {
+      const dx = ball.x - circle.x;
+      const dy = ball.y - circle.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const effectiveRadius = circle.radius - ball.radius;
+
+      if (distance > effectiveRadius) {
+        const angle = Math.atan2(dy, dx);
+
+        ball.x = circle.x + Math.cos(angle) * effectiveRadius;
+        ball.y = circle.y + Math.sin(angle) * effectiveRadius;
+
+        const randomAngle = (Math.random() * Math.PI / 1.5) - Math.PI / 3; 
+        const bounceAngle = angle + Math.PI + randomAngle;
+
+        const currentSpeed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
+        const newSpeed = bounceMultiplyEnabled ? currentSpeed * bouncinessValue : baseSpeed * bouncinessValue;
+
+        ball.velocityX = Math.cos(bounceAngle) * newSpeed;
+        ball.velocityY = Math.sin(bounceAngle) * newSpeed;
+
+        if (ballGrowthEnabled) {
+          ball.radius *= 1.1;
+        }
+
+        if (circleShrinkEnabled) {
+          circle.radius *= 0.99;
+        }
+      }
+    }
+
+    function update() {
+      balls.forEach(ball => {
+        if (gravityEnabled) {
+          ball.velocityY += ball.gravity;
+        }
+
+        if (zigzagEnabled) {
+          zigzagPhase += 0.1;
+          ball.x += Math.sin(zigzagPhase) * (zigzagIntensity / 10);
+        }
+
+        if (spinEnabled) {
+          ball.rotation += 0.1;
+        }
+
+        if (pulseEnabled) {
+          pulsePhase += 0.1;
+          ball.radius = ball.originalRadius * (1 + Math.sin(pulsePhase) * 0.2);
+        }
+
+        ball.x += ball.velocityX;
+        ball.y += ball.velocityY;
+
+        if (trailEnabled) {
+          ball.trail.push({x: ball.x, y: ball.y});
+          if (ball.trail.length > ball.maxTrail) {
+            ball.trail.shift();
+          }
+        }
+
         if (glitterEnabled) {
-          glitterParticles.forEach(particle => {
+          addGlitterParticle();
+          updateGlitter();
+        }
+
+        checkCollision(ball);
+      });
+    }
+
+    function addGlitterParticle() {
+      glitterParticles.push({
+        x: balls[0].x,
+        y: balls[0].y,
+        life: 1,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4
+      });
+    }
+
+    function updateGlitter() {
+      glitterParticles = glitterParticles.filter(particle => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.life -= 0.02;
+        return particle.life > 0;
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      balls.forEach(ball => {
+        if (trailEnabled && ball.trail.length > 0) {
+          ball.trail.forEach((pos, i) => {
+            const alpha = i / ball.trail.length;
             ctx.beginPath();
-            ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = `${balls[0].color}${Math.floor(particle.life * 255).toString(16).padStart(2, '0')}`;
+            ctx.arc(pos.x, pos.y, ball.radius * alpha, 0, Math.PI * 2);
+            ctx.fillStyle = `${ball.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
             ctx.fill();
           });
         }
+        
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(ball.rotation);
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ball.color;
+        ctx.fill();
+        
+        if (spinEnabled) {
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(ball.radius, 0);
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      });
+      
+      if (glitterEnabled) {
+        glitterParticles.forEach(particle => {
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = `${balls[0].color}${Math.floor(particle.life * 255).toString(16).padStart(2, '0')}`;
+          ctx.fill();
+        });
       }
-  
-      function gameLoop() {
-        update();
-        draw();
-        requestAnimationFrame(gameLoop);
-      }
-  
-      updateStatusIndicators();
-      document.getElementById('controls').classList.add('expanded');
-      gameLoop();
-    </script>
-  </body></html>
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    updateStatusIndicators();
+    document.getElementById('controls').classList.add('expanded');
+    gameLoop();
+  </script>
+</body></html>
