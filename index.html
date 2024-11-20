@@ -191,6 +191,7 @@
       display: flex;
       gap: 10px;
       flex-wrap: wrap; /* Allow wrapping for small screens */
+      margin-bottom: 15px; /* Add bottom margin */
     }
     #audioControls button {
       flex: 1;
@@ -240,6 +241,50 @@
       pointer-events: none;
       font-size: 12px;
     }
+    .hit-sound-input {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: #444;
+      padding: 5px 15px;
+      border-radius: 15px;
+    }
+    .hit-sound-input button {
+      margin: 0;
+      white-space: nowrap;
+    }
+    .hit-sound-input input[type="text"] {
+      min-width: 200px;
+    }
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #444;
+      padding: 5px 15px;
+      border-radius: 15px;
+      color: white;
+      margin: 10px 0; /* Add vertical margin */
+    }
+    .volume-control input[type="range"] {
+      width: 100px;
+    }
+    .volume-value {
+      min-width: 40px;
+      text-align: right;
+    }
+    /* Add inside the existing style section */
+    #loopBtn {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 15px;
+      cursor: pointer;
+    }
+    #loopBtn.active {
+      background: #4CAF50;
+    }
   </style>
 </head>
 <body>
@@ -266,6 +311,17 @@
         <button onclick="togglePlay()">Play/Pause</button>
         <button onclick="stopAudio()">Stop</button>
         <button onclick="removeSelected()">Remove</button>
+        <button onclick="toggleLoop()" id="loopBtn">Loop<span class="status-indicator"></span></button>
+      </div>
+      <div class="volume-control">
+        <label>Volume:</label>
+        <input type="range" 
+               min="0" 
+               max="1" 
+               step="0.01" 
+               value="1" 
+               oninput="updateAudioVolume(this.value)">
+        <span id="audioVolumeValue">100%</span>
       </div>
       <div id="nowPlaying"></div>
     </div>
@@ -293,6 +349,7 @@
           <button onclick="toggleSpin()" id="spinBtn">Toggle Spin<span class="status-indicator"></span></button>
           <button onclick="toggleZigzag()" id="zigzagBtn">Toggle Zigzag<span class="status-indicator"></span></button>
           <button onclick="toggleGlitter()" id="glitterBtn">Toggle Glitter<span class="status-indicator"></span></button>
+          <button onclick="toggleRandomBounce()" id="randomBounceBtn">Random Bounce<span class="status-indicator"></span></button>
         </div>
         <div class="control-row">
           <div class="color-picker-container">
@@ -317,26 +374,231 @@
             <span id="speedValue" onclick="promptCustomValue('speed')">5.0</span>
           </div>
         </div>
+        <div class="control-row">
+          <button onclick="toggleHitSound()" id="hitSoundBtn">Toggle Hit Sound<span class="status-indicator"></span></button>
+          <div class="hit-sound-input">
+            <input type="text" id="hitSoundLink" placeholder="Paste hit sound URL" style="padding: 5px; background: #444; border: none; color: white; border-radius: 5px;">
+            <input type="file" id="hitSoundFile" accept="audio/*" style="display: none">
+            <button onclick="document.getElementById('hitSoundFile').click()">Upload</button>
+          </div>
+          <div class="volume-control">
+            <label>Volume:</label>
+            <input type="range" 
+                   min="0" 
+                   max="1" 
+                   step="0.01" 
+                   value="1" 
+                   oninput="updateHitSoundVolume(this.value)">
+            <span id="hitSoundVolumeValue">100%</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
+    const YT_API_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'; // Replace with your API key
+    const ytdlUrl = 'https://youtube-dl-helper.herokuapp.com/audio?url='; // Example backend service
+
     let audio = null;
     let playlist = [];
+    let hitSoundEnabled = false;
+    let hitSound = null;
+    let hitSoundVolume = 1.0;
+    let audioVolume = 1.0;
+    let randomBounceEnabled = false; // New variable for random bounce
+    let audioLoopEnabled = false; // New variable for audio looping
 
-    // Load playlist from localStorage
-    function loadPlaylist() {
-      const saved = localStorage.getItem('audioPlaylist');
-      if (saved) {
-        playlist = JSON.parse(saved);
-        updatePlaylistDisplay();
+    // Add helper function for YouTube link validation
+    function isYouTubeUrl(url) {
+      return url.includes('youtube.com') || url.includes('youtu.be');
+    }
+
+    async function getYouTubeAudioUrl(videoId) {
+      try {
+        // First try the direct YouTube audio URL
+        const response = await fetch(`https://youtube-dl-helper-api.herokuapp.com/audio?v=${videoId}`);
+        if (response.ok) {
+          return await response.text();
+        }
+        
+        // Fallback to alternative service
+        const fallbackResponse = await fetch(`https://invidious-us.kavin.rocks/api/v1/videos/${videoId}`);
+        if (fallbackResponse.ok) {
+          const data = await fallbackResponse.json();
+          return data.adaptiveFormats.find(f => f.type.includes('audio'))?.url;
+        }
+        
+        throw new Error('Could not fetch YouTube audio');
+      } catch (error) {
+        console.error('Error fetching YouTube audio:', error);
+        throw error;
       }
     }
 
-    // Save playlist to localStorage
-    function savePlaylist() {
-      localStorage.setItem('audioPlaylist', JSON.stringify(playlist));
+    // Update addAudioLink function
+    async function addAudioLink() {
+      const input = document.getElementById('audioLink');
+      const url = input.value.trim();
+      
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+      
+      try {
+        if (isYouTubeUrl(url)) {
+          const videoId = extractYouTubeId(url);
+          if (!videoId) {
+            throw new Error('Invalid YouTube URL');
+          }
+
+          // Show loading state
+          document.getElementById('nowPlaying').textContent = 'Loading YouTube info...';
+
+          // Get video title
+          const infoResponse = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+          const videoInfo = await infoResponse.json();
+          
+          if (!videoInfo.title) {
+            throw new Error('Could not fetch video title');
+          }
+
+          // Try to get audio URL
+          const audioUrl = await getYouTubeAudioUrl(videoId);
+          
+          if (!audioUrl) {
+            throw new Error('Could not get YouTube audio URL');
+          }
+
+          // Add to playlist
+          playlist.push({
+            name: videoInfo.title,
+            url: audioUrl,
+            type: 'youtube',
+            originalUrl: url
+          });
+
+          updatePlaylistDisplay();
+          input.value = '';
+          document.getElementById('nowPlaying').textContent = 'Added: ' + videoInfo.title;
+
+        } else {
+          // Handle non-YouTube URLs as before
+          const testAudio = new Audio();
+          testAudio.src = url;
+          
+          await new Promise((resolve, reject) => {
+            testAudio.addEventListener('loadedmetadata', resolve);
+            testAudio.addEventListener('error', reject);
+            setTimeout(() => reject(new Error('Audio loading timeout')), 5000);
+          });
+          
+          playlist.push({
+            name: url.split('/').pop() || 'Audio Track',
+            url: url,
+            type: 'audio'
+          });
+          
+          updatePlaylistDisplay();
+          input.value = '';
+        }
+      } catch (error) {
+        console.error('Error adding audio:', error);
+        alert('Could not add audio: ' + error.message);
+        document.getElementById('nowPlaying').textContent = 'Error adding audio';
+      }
+    }
+
+    // Update setupHitSound to handle YouTube
+    async function setupHitSound(url) {
+      try {
+        if (isYouTubeUrl(url)) {
+          const videoId = extractYouTubeId(url);
+          if (!videoId) {
+            throw new Error('Invalid YouTube URL');
+          }
+          
+          const audioUrl = await getYouTubeAudioUrl(videoId);
+          if (!audioUrl) {
+            throw new Error('Could not get YouTube audio URL');
+          }
+          
+          hitSound = new Audio(audioUrl);
+        } else {
+          hitSound = new Audio(url);
+        }
+        
+        hitSound.crossOrigin = "anonymous";
+        hitSound.volume = hitSoundVolume;
+        
+        await new Promise((resolve, reject) => {
+          hitSound.addEventListener('canplaythrough', resolve);
+          hitSound.addEventListener('error', reject);
+          setTimeout(() => reject(new Error('Hit sound loading timeout')), 5000);
+        });
+        
+        alert('Hit sound loaded successfully');
+        
+      } catch (error) {
+        console.error('Error setting up hit sound:', error);
+        alert('Could not set up hit sound: ' + error.message);
+        hitSound = null;
+      }
+    }
+
+    // Update initAudio function
+    async function initAudio() {
+      if (audio) {
+        audio.pause();
+        audio = null;
+      }
+      
+      const songSelect = document.getElementById('songSelect');
+      const selectedValue = songSelect.value;
+      
+      if (!selectedValue) {
+        document.getElementById('nowPlaying').textContent = 'No song selected';
+        return;
+      }
+      
+      const selectedItem = playlist.find(item => item.url === selectedValue);
+      
+      try {
+        document.getElementById('nowPlaying').textContent = 'Loading audio...';
+        
+        audio = new Audio();
+        audio.crossOrigin = "anonymous"; // Enable CORS
+        audio.onerror = (e) => {
+          console.error('Audio loading error:', e);
+          document.getElementById('nowPlaying').textContent = 'Error: Could not load audio file';
+          alert('Could not load audio file. Please ensure the URL is correct and accessible.');
+        };
+        
+        audio.volume = audioVolume;
+        audio.loop = audioLoopEnabled; // Set loop state
+        
+        await new Promise((resolve, reject) => {
+          audio.addEventListener('canplaythrough', resolve, { once: true });
+          audio.addEventListener('error', reject, { once: true });
+          audio.src = selectedValue; // Set the source last
+        });
+        
+        document.getElementById('nowPlaying').textContent = 'Ready to play: ' + selectedItem.name;
+        
+      } catch (error) {
+        console.error('Error initializing audio:', error);
+        document.getElementById('nowPlaying').textContent = 'Error: Could not initialize audio';
+        alert('Could not initialize audio player. Please try again.');
+      }
+    }
+
+    // Add helper function to extract YouTube video ID
+    function extractYouTubeId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
     }
 
     // Update the select element with playlist items
@@ -361,133 +623,38 @@
           url: url,
           type: 'file'
         });
-        savePlaylist();
         updatePlaylistDisplay();
       }
     });
 
-    // Improved add audio link function
-    async function addAudioLink() {
-      const input = document.getElementById('audioLink');
-      const url = input.value.trim();
-      
-      if (!url) return;
-      
-      try {
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-          // Extract video ID with better error handling
-          let videoId = '';
-          if (url.includes('youtube.com/watch?v=')) {
-            videoId = url.split('watch?v=')[1].split('&')[0];
-          } else if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1].split('?')[0];
-          }
-          
-          if (!videoId) {
-            throw new Error('Invalid YouTube URL');
-          }
-          
-          playlist.push({
-            name: `YouTube Video - ${videoId}`,
-            url: `https://www.youtube.com/embed/${videoId}?enablejsapi=1`,
-            type: 'youtube'
-          });
-          
-        } else {
-          // For direct audio links, check if the URL returns audio content
-          const response = await fetch(url);
-          const contentType = response.headers.get('content-type');
-          
-          if (!contentType || !contentType.includes('audio')) {
-            throw new Error('URL does not point to a valid audio file');
-          }
-          
-          const name = url.split('/').pop() || 'Audio Track';
-          playlist.push({
-            name: name,
-            url: url,
-            type: 'direct'
-          });
-        }
-        
-        savePlaylist();
-        updatePlaylistDisplay();
-        input.value = '';
-        
-      } catch (error) {
-        console.error('Error adding audio:', error);
-        alert('Could not add audio: ' + (error.message || 'Invalid or inaccessible URL'));
-      }
-    }
-
-    // Improved init audio function
-    function initAudio() {
-      if (audio) {
-        audio.pause();
-        audio = null;
+    async function togglePlay() {
+      if (!audio) {
+        await initAudio();
+        return;
       }
       
-      const songSelect = document.getElementById('songSelect');
-      const selectedValue = songSelect.value;
-      
-      if (!selectedValue) return;
-      
-      const selectedItem = playlist.find(item => item.url === selectedValue);
-      if (!selectedItem) return;
-      
       try {
-        if (selectedItem.type === 'youtube') {
-          if (!window.YT) {
-            // Load YouTube IFrame API if not already loaded
-            if (!document.getElementById('youtube-api')) {
-              const tag = document.createElement('script');
-              tag.id = 'youtube-api';
-              tag.src = "https://www.youtube.com/iframe_api";
-              const firstScriptTag = document.getElementsByTagName('script')[0];
-              firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-              
-              window.onYouTubeIframeAPIReady = () => {
-                createYouTubePlayer(selectedItem);
-              };
-            } else {
-              createYouTubePlayer(selectedItem);
-            }
-          } else {
-            createYouTubePlayer(selectedItem);
-          }
-        } else {
-          audio = new Audio();
+        if (audio.paused) {
+          const playPromise = audio.play();
           
-          // Add error handling for audio loading
-          audio.onerror = (e) => {
-            console.error('Audio loading error:', e);
-            alert('Failed to load audio file. The file may be invalid or inaccessible.');
-            document.getElementById('nowPlaying').textContent = 'Error loading audio';
-          };
-          
-          audio.onloadeddata = () => {
-            audio.play()
-              .catch(e => {
-                console.error('Audio playback error:', e);
-                alert('Failed to play audio. The file may be invalid or blocked by browser policies.');
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                document.getElementById('nowPlaying').textContent = 'Now playing: ' + 
+                  document.getElementById('songSelect').options[document.getElementById('songSelect').selectedIndex].text;
+              })
+              .catch(error => {
+                console.warn("Playback error:", error);
+                document.getElementById('nowPlaying').textContent = 'Playback error - try again';
               });
-          };
-          
-          audio.src = selectedValue;
-          document.getElementById('nowPlaying').textContent = 'Loading...';
-          
-          audio.addEventListener('playing', () => {
-            document.getElementById('nowPlaying').textContent = 'Now playing: ' + 
-              songSelect.options[songSelect.selectedIndex].text;
-          });
-          
-          audio.addEventListener('ended', () => {
-            document.getElementById('nowPlaying').textContent = 'Playback ended';
-          });
+          }
+        } else {
+          audio.pause();
+          document.getElementById('nowPlaying').textContent = 'Paused';
         }
       } catch (error) {
-        console.error('Error initializing audio:', error);
-        alert('Error initializing audio playback');
+        console.error("Toggle play error:", error);
+        document.getElementById('nowPlaying').textContent = 'Playback error - try again';
       }
     }
 
@@ -497,45 +664,9 @@
       
       if (index >= 0) {
         playlist.splice(index, 1);
-        savePlaylist();
         updatePlaylistDisplay();
         stopAudio();
       }
-    }
-
-    function createYouTubePlayer(selectedItem) {
-      // Remove any existing player
-      const existingPlayer = document.getElementById('youtube-player');
-      if (existingPlayer) {
-        existingPlayer.remove();
-      }
-      
-      // Create hidden YouTube player
-      const playerDiv = document.createElement('div');
-      playerDiv.id = 'youtube-player';
-      playerDiv.style.display = 'none';
-      document.body.appendChild(playerDiv);
-      
-      const videoId = selectedItem.url.split('embed/')[1].split('?')[0];
-      
-      new YT.Player(playerDiv, {
-        videoId: videoId,
-        playerVars: {
-          'enablejsapi': 1,
-          'origin': window.location.origin
-        },
-        events: {
-          onReady: (event) => {
-            event.target.playVideo();
-            document.getElementById('nowPlaying').textContent = 'Now playing: ' + document.getElementById('songSelect').options[document.getElementById('songSelect').selectedIndex].text;
-          },
-          onStateChange: (event) => {
-            if (event.data === YT.PlayerState.ENDED) {
-              document.getElementById('nowPlaying').textContent = 'Playback ended';
-            }
-          }
-        }
-      });
     }
 
     // Update the stopAudio function to handle YouTube
@@ -545,53 +676,9 @@
         audio.currentTime = 0;
         document.getElementById('nowPlaying').textContent = 'Stopped';
       }
-      
-      const youtubePlayer = document.getElementById('youtube-player');
-      if (youtubePlayer) {
-        youtubePlayer.remove();
-        document.getElementById('nowPlaying').textContent = 'Stopped';
-      }
-    }
-
-    // Update togglePlay to handle YouTube
-    function togglePlay() {
-      if (!audio) {
-        const youtubePlayer = document.getElementById('youtube-player');
-        if (!youtubePlayer) {
-          initAudio();
-        } else {
-          // Get the YouTube player instance using the correct frame
-          const frame = document.querySelector('#youtube-player iframe');
-          if (frame && frame.contentWindow) {
-            const player = frame.contentWindow;
-            // Use postMessage to control the player
-            try {
-              player.postMessage('{"event":"command","func":"getPlayerState","args":""}', '*');
-              player.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-            } catch (e) {
-              // If there's an error, reinitialize the player
-              initAudio();
-            }
-          } else {
-            initAudio();
-          }
-        }
-        return;
-      }
-      
-      if (audio.paused) {
-        audio.play();
-        document.getElementById('nowPlaying').textContent = 'Now playing: ' + document.getElementById('songSelect').options[document.getElementById('songSelect').selectedIndex].text;
-      } else {
-        audio.pause();
-        document.getElementById('nowPlaying').textContent = 'Paused';
-      }
     }
 
     document.getElementById('songSelect').addEventListener('change', initAudio);
-
-    // Load saved playlist on page load
-    loadPlaylist();
 
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -601,8 +688,8 @@
     canvas.height = size;
 
     let balls = [{
-      x: size / 2,
-      y: size / 2,
+      x: size / 2, // Center position
+      y: size / 2, // Center position
       radius: size / 40,
       velocityX: 5,
       velocityY: 0,
@@ -617,9 +704,9 @@
     }];
 
     const circle = {
-      x: size / 2,
-      y: size / 2,
-      radius: size / 2 - balls[0].radius,
+      x: size / 2, // Center of canvas
+      y: size / 2, // Center of canvas 
+      radius: size / 2 - balls[0].radius, // Original size
       originalRadius: size / 2 - balls[0].originalRadius
     };
 
@@ -649,6 +736,10 @@
       document.querySelector('#zigzagBtn .status-indicator').classList.toggle('on', zigzagEnabled);
       document.querySelector('#glitterBtn .status-indicator').classList.toggle('on', glitterEnabled);
       document.querySelector('#bounceMultiplyBtn .status-indicator').classList.toggle('on', bounceMultiplyEnabled);
+      document.querySelector('#hitSoundBtn .status-indicator').classList.toggle('on', hitSoundEnabled);
+      document.querySelector('#randomBounceBtn .status-indicator').classList.toggle('on', randomBounceEnabled); // Update for random bounce
+      document.querySelector('#loopBtn .status-indicator').classList.toggle('on', audioLoopEnabled); // Update for loop
+      document.getElementById('loopBtn').classList.toggle('active', audioLoopEnabled); // Update for loop button
     }
 
     function toggleControls() {
@@ -852,13 +943,21 @@
       const effectiveRadius = circle.radius - ball.radius;
 
       if (distance > effectiveRadius) {
+        // Play hit sound if enabled and available
+        if (hitSoundEnabled && hitSound) {
+          const soundClone = hitSound.cloneNode();
+          soundClone.volume = hitSoundVolume; // Set volume
+          soundClone.play().catch(e => console.log('Hit sound playback failed:', e));
+        }
+
         const angle = Math.atan2(dy, dx);
 
         ball.x = circle.x + Math.cos(angle) * effectiveRadius;
         ball.y = circle.y + Math.sin(angle) * effectiveRadius;
 
-        const randomAngle = (Math.random() * Math.PI / 1.5) - Math.PI / 3; 
-        const bounceAngle = angle + Math.PI + randomAngle;
+        const bounceAngle = randomBounceEnabled ? 
+          Math.random() * Math.PI * 2 : // Complete random direction when enabled
+          angle + Math.PI + (Math.random() * Math.PI / 1.5 - Math.PI / 3); // Original semi-random bounce
 
         const currentSpeed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
         const newSpeed = bounceMultiplyEnabled ? currentSpeed * bouncinessValue : baseSpeed * bouncinessValue;
@@ -874,6 +973,60 @@
           circle.radius *= 0.99;
         }
       }
+    }
+
+    // Add hit sound file handler
+    document.getElementById('hitSoundFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setupHitSound(url);
+      }
+    });
+
+    // Add hit sound link handler
+    document.getElementById('hitSoundLink').addEventListener('change', async (e) => {
+      const url = e.target.value.trim();
+      if (url) {
+        await setupHitSound(url);
+      }
+    });
+
+    function updateHitSoundVolume(value) {
+      hitSoundVolume = parseFloat(value);
+      if (hitSound) {
+        hitSound.volume = hitSoundVolume;
+      }
+      document.getElementById('hitSoundVolumeValue').textContent = 
+        Math.round(hitSoundVolume * 100) + '%';
+    }
+
+    function toggleHitSound() {
+      hitSoundEnabled = !hitSoundEnabled;
+      updateStatusIndicators();
+    }
+
+    function toggleLoop() {
+      audioLoopEnabled = !audioLoopEnabled;
+      if (audio) {
+        audio.loop = audioLoopEnabled;
+      }
+      document.querySelector('#loopBtn .status-indicator').classList.toggle('on', audioLoopEnabled);
+      document.getElementById('loopBtn').classList.toggle('active', audioLoopEnabled);
+    }
+
+    function toggleRandomBounce() {
+      randomBounceEnabled = !randomBounceEnabled; // Toggle random bounce state
+      updateStatusIndicators(); // Update the indicators
+    }
+
+    function updateAudioVolume(value) {
+      audioVolume = parseFloat(value);
+      if (audio) {
+        audio.volume = audioVolume;
+      }
+      document.getElementById('audioVolumeValue').textContent = 
+        Math.round(audioVolume * 100) + '%';
     }
 
     function update() {
